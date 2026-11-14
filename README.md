@@ -9,7 +9,8 @@ Source of truth for my homelab: architecture, networking, services, configuratio
 
 ## Architecture
 
-- [Network architecture v0.3](docs/architecture/network-v0.3.md): frozen historical design, kept as the baseline before the VLAN design is simplified
+- [Network architecture v0.4-simple](docs/architecture/network-v0.4-simple.md): **CURRENT TARGET / PLANNING**, the simplified design with four active VLANs
+- [Network architecture v0.3](docs/architecture/network-v0.3.md): **FROZEN HISTORICAL DESIGN**, the previous, more segmented design
 
 ## Secrets policy
 
