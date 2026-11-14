@@ -1,0 +1,13 @@
+# Secrets and credentials - never commit
+*.conf
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+secrets/
+private/
+
+# macOS
+.DS_Store
