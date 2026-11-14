@@ -4,7 +4,12 @@ Source of truth for my homelab: architecture, networking, services, configuratio
 
 ## Layout
 
+- `docs/architecture/` architecture design baselines and CTRoadmap exports
 - `docs/networking/` network design and tested network configurations
+
+## Architecture
+
+- [Network architecture v0.3](docs/architecture/network-v0.3.md): frozen historical design, kept as the baseline before the VLAN design is simplified
 
 ## Secrets policy
 

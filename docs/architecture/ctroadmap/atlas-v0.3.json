@@ -1,0 +1,2217 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "Home Network Target Architecture v0.3",
+    "description": "Target home-network architecture to visualize before implementation. Existing = live; proposed/future = planned. VLAN 40 is reserved and inactive.",
+    "updated_at": "2026-11-11T19:01:53.137359+00:00"
+  },
+  "tiles": [
+    {
+      "id": "internet",
+      "type": "service",
+      "title": "Internet",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 90.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "role": "Public Internet"
+      },
+      "notes": "External network. Reached only through the ISP modem/ONT and ISP WAN. Mullvad and Proton are logical tunnels over that WAN, not separate WANs.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "gw-mullvad",
+      "type": "service",
+      "title": "Mullvad WireGuard egress tunnel (LOGICAL)",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 570.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "kind": "LOGICAL WireGuard tunnel/gateway on OPNsense",
+        "carried_over": "ISP WAN",
+        "used_by": "VLAN 10 Trusted, VLAN 60 Guest"
+      },
+      "notes": "Logical egress tunnel originating from OPNsense and traversing the ISP WAN. NOT a separate physical WAN. Fail-closed (no ISP fallback) for VLAN 10 and VLAN 60.",
+      "note_pages": [],
+      "tags": [
+        "egress-path",
+        "mullvad"
+      ]
+    },
+    {
+      "id": "isp-modem",
+      "type": "node",
+      "title": "ISP modem / ONT [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 330.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "role": "ISP handoff",
+        "path": "ISP WAN -> OPNsense"
+      },
+      "notes": "Existing. First hop of the only physical Internet path.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "gw-proton",
+      "type": "service",
+      "title": "Proton VPN WireGuard egress tunnel (LOGICAL)",
+      "parent": null,
+      "position": {
+        "x": 2230.0,
+        "y": 570.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "kind": "LOGICAL WireGuard tunnel/gateway on OPNsense",
+        "carried_over": "ISP WAN",
+        "used_by": "VLAN 20 Media"
+      },
+      "notes": "Logical egress tunnel originating from OPNsense and traversing the ISP WAN. NOT a separate physical WAN. Fail-closed (no ISP fallback) for VLAN 20; local Jellyfin stays reachable.",
+      "note_pages": [],
+      "tags": [
+        "egress-path",
+        "proton"
+      ]
+    },
+    {
+      "id": "opnsense",
+      "type": "node",
+      "title": "OPNsense Firewall / Router [TO BUY]",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 570.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "role": "Router, firewall, VLAN gateway, DNS/DHCP, VPN gateway",
+        "egress": "ISP WAN (physical); Mullvad + Proton WG (logical, over ISP WAN)",
+        "dns": "home.arpa"
+      },
+      "notes": "WHY: single central point for routing, inter-VLAN policy, DNS/DHCP and VPN egress selection. Dedicated appliance.\nEgress map: VLAN 10 -> Mullvad tunnel; VLAN 20 -> Proton tunnel; VLAN 30 -> ISP WAN directly (no VPN); VLAN 60 -> Mullvad tunnel. VLAN 50 Internet egress: POLICY TBD / per-service. Mullvad and Proton are logical tunnels over the ISP WAN. Local inter-VLAN traffic stays local.",
+      "note_pages": [],
+      "tags": [
+        "proposed-to-buy"
+      ]
+    },
+    {
+      "id": "note-failclosed",
+      "type": "note",
+      "title": "VPN fail-closed behaviour",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 330.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "VLAN10/60 Mullvad DOWN = BLOCKED. VLAN20 Proton DOWN = BLOCKED (local Jellyfin OK). VLAN30 always ISP."
+      },
+      "notes": "VLAN 10 Trusted: Mullvad UP -> via Mullvad. Mullvad DOWN -> Internet BLOCKED. NO fallback to ISP.\nVLAN 60 Guest: Mullvad UP -> via Mullvad. Mullvad DOWN -> Internet BLOCKED. NO fallback to ISP.\nVLAN 20 Media: Proton UP -> via Proton. Proton DOWN -> Internet BLOCKED. NO fallback to ISP. Local Jellyfin access continues.\nVLAN 30 Direct: Always ISP WAN directly with no commercial VPN, independent of Mullvad/Proton health.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "note-dns",
+      "type": "note",
+      "title": "Local DNS: home.arpa",
+      "parent": null,
+      "position": {
+        "x": 2230.0,
+        "y": 330.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "OPNsense is the local DNS source; no .local"
+      },
+      "notes": "Conceptual names: jellyfin.home.arpa, linkwarden.home.arpa, proxmox.home.arpa, nas.home.arpa, opnsense.home.arpa. Do not use .local for ordinary DNS names.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "flint2",
+      "type": "node",
+      "title": "GL.iNet Flint 2 (GL-MT6000) [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 810.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "role": "VLAN-aware Wi-Fi access point (not main router)",
+        "uplink": "802.1Q trunk: tagged VLAN 10,30,60,99, no native/untagged VLAN",
+        "ssids": "Home, Direct, Guest"
+      },
+      "notes": "WHY: reuse existing hardware as the Wi-Fi AP. Active SSIDs are ONLY Home (VLAN 10), Direct (VLAN 30), Guest (VLAN 60). No active Media/Servers/Management/IoT SSID.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "main-switch",
+      "type": "node",
+      "title": "Managed 2.5GbE VLAN-aware switch [TO BUY]",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 810.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "role": "Main switch",
+        "uplink": "802.1Q trunk from OPNsense: tagged only, no native/untagged VLAN",
+        "vlans": "10, 20, 30, 50, 60, 99 (40 reserved)"
+      },
+      "notes": "WHY: carries all active VLANs between OPNsense, Wi-Fi AP, desk and servers. VLAN 40 is reserved and not deployed.\nAll trunks are tagged-only (no native/untagged VLAN). Access ports are untagged in their assigned VLAN.",
+      "note_pages": [],
+      "tags": [
+        "proposed-to-buy"
+      ]
+    },
+    {
+      "id": "vlan10",
+      "type": "config",
+      "title": "VLAN 10 - Trusted",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.10.0/24",
+        "gateway": "10.10.10.1",
+        "egress": "Mullvad (fail-closed)"
+      },
+      "notes": "WHY: trusted household/personal client devices, kept private behind Mullvad. Access: Internet via Mullvad; selected user-facing services on VLAN 50. Ordinary Trusted clients have NO access to VLAN 99. Designated admin computers (ADMIN_DEVICES) get an explicit allow to VLAN 99 later.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "ssid-home",
+      "type": "service",
+      "title": "SSID Home -> VLAN 10",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "ssid": "Home",
+        "vlan": "10 Trusted",
+        "egress": "Mullvad"
+      },
+      "notes": "Active Wi-Fi SSID served by Flint 2.",
+      "note_pages": [],
+      "tags": [
+        "ssid-active"
+      ]
+    },
+    {
+      "id": "clients10",
+      "type": "node",
+      "title": "Other Trusted clients (non-admin)",
+      "parent": null,
+      "position": {
+        "x": 630.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "examples": "GrapheneOS phone, residents' phones/tablets/laptops, dual-use laptop in personal mode",
+        "vlan99": "DENY"
+      },
+      "notes": "Normal Trusted clients. No VLAN 99 permission. Not part of ADMIN_DEVICES.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "vlan30",
+      "type": "config",
+      "title": "VLAN 30 - Direct",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 1910.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.30.0/24",
+        "gateway": "10.10.30.1",
+        "egress": "ISP WAN directly"
+      },
+      "notes": "WHY: VPN-bypass / compatibility network for work laptop while working, work phone if necessary, sites that reject Mullvad/Proton addresses, corporate VPN compatibility and troubleshooting commercial VPN problems. 'Direct' means direct ISP egress, NOT unrestricted internal access: minimal internal access, no default access to VLAN 99.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "ssid-direct",
+      "type": "service",
+      "title": "SSID Direct -> VLAN 30",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 1910.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "ssid": "Direct",
+        "vlan": "30 Direct",
+        "egress": "ISP WAN"
+      },
+      "notes": "Active Wi-Fi SSID served by Flint 2. Also available as wired Ethernet at the desk.",
+      "note_pages": [],
+      "tags": [
+        "ssid-active"
+      ]
+    },
+    {
+      "id": "vlan60",
+      "type": "config",
+      "title": "VLAN 60 - Guest",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 2340.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.60.0/24",
+        "gateway": "10.10.60.1",
+        "egress": "Mullvad (fail-closed)"
+      },
+      "notes": "WHY: Internet-only access for guests. Internet via Mullvad; DNS/DHCP allowed; NO access to VLAN 10, 20, 30, 50, 99 or future VLAN 40. Wireless client isolation enabled.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "ssid-guest",
+      "type": "service",
+      "title": "SSID Guest -> VLAN 60",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 2340.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "ssid": "Guest",
+        "vlan": "60 Guest",
+        "egress": "Mullvad",
+        "isolation": "client isolation on"
+      },
+      "notes": "Active Wi-Fi SSID served by Flint 2.",
+      "note_pages": [],
+      "tags": [
+        "ssid-active"
+      ]
+    },
+    {
+      "id": "vlan40",
+      "type": "config",
+      "title": "VLAN 40 - IoT [RESERVED / INACTIVE / FUTURE]",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 2770.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.40.0/24 (reserved)",
+        "status": "RESERVED / INACTIVE",
+        "deployed": "no"
+      },
+      "notes": "WHY reserved: there are currently no smart-home/IoT devices that need this VLAN. Subnet is held so it can be activated later. Not carried on the trunk as an active VLAN. No active IoT SSID.",
+      "note_pages": [],
+      "tags": [
+        "reserved",
+        "inactive",
+        "future"
+      ]
+    },
+    {
+      "id": "iot-devices",
+      "type": "iot_device",
+      "title": "IoT devices [FUTURE / OPTIONAL]",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 2770.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "status": "none today"
+      },
+      "notes": "Future only. No IoT devices are described in the spec.",
+      "note_pages": [],
+      "tags": [
+        "future-optional"
+      ]
+    },
+    {
+      "id": "ssid-iot",
+      "type": "service",
+      "title": "IoT SSID [FUTURE ONLY - not active]",
+      "parent": null,
+      "position": {
+        "x": 630.0,
+        "y": 2770.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "status": "NOT active"
+      },
+      "notes": "Shown as future only. Not active infrastructure.",
+      "note_pages": [],
+      "tags": [
+        "future-optional",
+        "ssid-inactive"
+      ]
+    },
+    {
+      "id": "desk-switch",
+      "type": "node",
+      "title": "Managed desk switch [TO BUY]",
+      "parent": null,
+      "position": {
+        "x": 1330.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "role": "Terminates VLAN 10 and VLAN 30 at the desk",
+        "uplink": "802.1Q trunk: tagged VLAN 10 + 30, no native/untagged VLAN"
+      },
+      "notes": "WHY: the desk needs BOTH Trusted (desktop) and Direct (work laptop via dock) wired, which an unmanaged switch cannot provide.",
+      "note_pages": [],
+      "tags": [
+        "proposed-to-buy"
+      ]
+    },
+    {
+      "id": "desktop-pc",
+      "type": "node",
+      "title": "Desktop PC [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "port": "untagged/access VLAN 10 Trusted",
+        "admin": "ADMIN_DEVICES member"
+      },
+      "notes": "Personal desktop. Should also have convenient access to VLAN 30 Direct when a website blocks Mullvad (mechanism undecided, see design-decision note).",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "port-spare10",
+      "type": "config",
+      "title": "Spare port - VLAN 10 (untagged)",
+      "parent": null,
+      "position": {
+        "x": 1330.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "mode": "untagged/access VLAN 10"
+      },
+      "notes": "Spare Trusted port.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "dock",
+      "type": "node",
+      "title": "Docking station [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "port": "untagged/access VLAN 30 Direct"
+      },
+      "notes": "Wired work-mode path for the laptop.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "note-desktop-decision",
+      "type": "note",
+      "title": "OPEN DESIGN DECISION: desktop -> VLAN 30",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "Mechanism not chosen yet"
+      },
+      "notes": "Do not prescribe yet. Options: (a) second physical NIC / USB Ethernet, (b) switch-port change, (c) VLAN-aware desktop configuration.",
+      "note_pages": [],
+      "tags": [
+        "open-decision"
+      ]
+    },
+    {
+      "id": "port-spare30",
+      "type": "config",
+      "title": "Spare port - VLAN 30 (untagged)",
+      "parent": null,
+      "position": {
+        "x": 1330.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "mode": "untagged/access VLAN 30"
+      },
+      "notes": "Spare Direct port.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "laptop",
+      "type": "node",
+      "title": "Dual-use work/personal laptop [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "work_mode": "Dock/Ethernet -> VLAN 30 -> ISP (optional corporate VPN)",
+        "personal_mode": "Home Wi-Fi -> VLAN 10 -> Mullvad"
+      },
+      "notes": "WHY two modes: work traffic goes direct via ISP for corporate VPN compatibility; personal use goes through Mullvad.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "old-desk-switch",
+      "type": "node",
+      "title": "Current unmanaged desk switch - to be retired/replaced",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 1960.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "status": "replaced by the managed desk switch",
+        "in_target_path": "no"
+      },
+      "notes": "Kept for inventory/history only. Replaced in the target architecture by the proposed managed desk switch; not part of the target traffic path.",
+      "note_pages": [],
+      "tags": [
+        "existing",
+        "retire"
+      ]
+    },
+    {
+      "id": "vlan20",
+      "type": "config",
+      "title": "VLAN 20 - Media",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 2490.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.20.0/24",
+        "gateway": "10.10.20.1",
+        "egress": "Proton VPN (fail-closed)"
+      },
+      "notes": "WHY: isolates the media player. It needs Internet via Proton and local Jellyfin on VLAN 50. No access to Trusted, Management or arbitrary server administration. No Media SSID initially.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "ugoos",
+      "type": "node",
+      "title": "Ugoos AM9 Pro [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1330.0,
+        "y": 2490.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "connection": "WIRED, untagged/access VLAN 20",
+        "needs": "Proton Internet + Jellyfin on VLAN 50"
+      },
+      "notes": "Wired media player. Output to TV over HDMI.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "tv",
+      "type": "node",
+      "title": "TV [EXISTING] - NO NETWORK",
+      "parent": null,
+      "position": {
+        "x": 1630.0,
+        "y": 2490.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "network": "NONE (intentionally offline)",
+        "input": "HDMI from Ugoos"
+      },
+      "notes": "The TV is intentionally NOT connected to the network or Internet.",
+      "note_pages": [],
+      "tags": [
+        "existing",
+        "offline"
+      ]
+    },
+    {
+      "id": "vlan50",
+      "type": "config",
+      "title": "VLAN 50 - Servers",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.50.0/24",
+        "gateway": "10.10.50.1",
+        "server_internet_egress": "POLICY TBD / per-service",
+        "wifi": "none (no Server SSID)"
+      },
+      "notes": "WHY: application/service workloads. VLAN 50 holds APPLICATION SERVICES; administration interfaces belong conceptually to VLAN 99. No Server Wi-Fi SSID exists.\nServer Internet egress: POLICY TBD / per-service. Not assigned to Mullvad, Proton or direct ISP.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "beelink",
+      "type": "node",
+      "title": "Beelink SER Mini PC [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 2330.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "cpu": "AMD Ryzen 7 3750H",
+        "ram": "16 GB",
+        "storage": "512 GB NVMe",
+        "uplink": "802.1Q trunk: tagged VLAN 50 + 99 only, no native/untagged VLAN"
+      },
+      "notes": "Existing compute host, planned to run Proxmox. Trunk to the main switch carries VLAN 50 (service workloads) and VLAN 99 (Proxmox host administration) only. No other VLANs are added to the Proxmox trunk yet. Architecture resolved; implementation deferred.",
+      "note_pages": [],
+      "tags": [
+        "architecture-resolved",
+        "existing"
+      ]
+    },
+    {
+      "id": "proxmox",
+      "type": "service",
+      "title": "Proxmox [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2630.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "status": "Architecture resolved; implementation deferred",
+        "role": "Hypervisor on the Beelink",
+        "mgmt": "VLAN 99 (host management)",
+        "name": "proxmox.home.arpa"
+      },
+      "notes": "Planned to run on the Beelink. VLAN 99 = Proxmox host management; VLAN 50 = application/VM/LXC service workloads. Architecture resolved; implementation deferred: the exact Proxmox/Linux bridge configuration is documented during deployment.",
+      "note_pages": [],
+      "tags": [
+        "architecture-resolved",
+        "planned"
+      ]
+    },
+    {
+      "id": "ds218",
+      "type": "node",
+      "title": "Synology DS218 NAS [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 2930.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "storage": "2 x 2 TB HDD, mirrored",
+        "attachment": "untagged/access VLAN 50 (SMB/NFS/media/backups)",
+        "dsm_access": "ADMIN_DEVICES only; DSM admin currently on VLAN 50 (VLAN 99 attachment FUTURE/TBD)"
+      },
+      "notes": "Holds media, important files and backups. Physically attached to VLAN 50 only (untagged/access), so DSM administration currently also happens on VLAN 50. ADMIN_DEVICES are explicitly allowed to DSM on VLAN 50; ordinary Trusted clients get no DSM administration. A dedicated Synology management attachment to VLAN 99 is FUTURE/TBD. DSM is not drawn on VLAN 99.",
+      "note_pages": [],
+      "tags": [
+        "existing"
+      ]
+    },
+    {
+      "id": "future-nas",
+      "type": "node",
+      "title": "DIY / Jonsbo media NAS [FUTURE / OPTIONAL]",
+      "parent": null,
+      "position": {
+        "x": 3230.0,
+        "y": 1240.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "status": "FUTURE / OPTIONAL"
+      },
+      "notes": "Future only. No connections or specs given in the spec.",
+      "note_pages": [],
+      "tags": [
+        "future-optional"
+      ]
+    },
+    {
+      "id": "linkwarden",
+      "type": "service",
+      "title": "Linkwarden - current: MacBook; planned: Proxmox/VLAN50",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "current": "runs on the MacBook",
+        "target": "Proxmox on Beelink, VLAN 50"
+      },
+      "notes": "CURRENT: runs on the MacBook. TARGET: migrates to Beelink/Proxmox on VLAN 50. Not hosted on the Beelink yet.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "jellyfin",
+      "type": "service",
+      "title": "Jellyfin [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2330.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Media service the Ugoos reaches on VLAN 50",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "floppy",
+      "type": "service",
+      "title": "Floppy [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2630.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Planned/current application workload listed in the spec.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "sonarr",
+      "type": "service",
+      "title": "Sonarr [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2930.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Planned/current application workload listed in the spec.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "radarr",
+      "type": "service",
+      "title": "Radarr [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 3230.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Planned/current application workload listed in the spec.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "prowlarr",
+      "type": "service",
+      "title": "Prowlarr [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Planned/current application workload listed in the spec.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "sabnzbd",
+      "type": "service",
+      "title": "SABnzbd [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2330.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "plane": "service, VLAN 50",
+        "host": "Beelink / Proxmox"
+      },
+      "notes": "Planned/current application workload listed in the spec.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "observability",
+      "type": "service",
+      "title": "Observability [PLANNED]",
+      "parent": null,
+      "position": {
+        "x": 2630.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "components": "Grafana, Prometheus or similar",
+        "plane": "service, VLAN 50"
+      },
+      "notes": "Planned observability stack.",
+      "note_pages": [],
+      "tags": [
+        "workload"
+      ]
+    },
+    {
+      "id": "future-apps",
+      "type": "service",
+      "title": "Other future Docker/VM/LXC apps",
+      "parent": null,
+      "position": {
+        "x": 2930.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "status": "future"
+      },
+      "notes": "Placeholder named in the spec.",
+      "note_pages": [],
+      "tags": [
+        "future-optional"
+      ]
+    },
+    {
+      "id": "vlan99",
+      "type": "config",
+      "title": "VLAN 99 - Management",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 2150.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "subnet": "10.10.99.0/24",
+        "gateway": "10.10.99.1",
+        "wifi": "none (no Management SSID)"
+      },
+      "notes": "WHY: infrastructure administration only. Normal household devices have no access. Only designated ADMIN_DEVICES (Desktop PC and MacBook, physically on VLAN 10) get an explicit firewall allow, plus the MGMT/RECOVERY port. Desktop and MacBook staying on VLAN 10 while explicitly allowed to VLAN 99 is INTENTIONAL; the dedicated MGMT / RECOVERY port is the emergency fallback.",
+      "note_pages": [],
+      "tags": [
+        "active-vlan"
+      ]
+    },
+    {
+      "id": "mgmt-port",
+      "type": "config",
+      "title": "MGMT / RECOVERY (main switch port, access VLAN 99)",
+      "parent": null,
+      "position": {
+        "x": 2330.0,
+        "y": 2150.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "mode": "untagged/access VLAN 99",
+        "switch": "main managed switch",
+        "purpose": "Emergency laptop connection if normal routed management access is broken"
+      },
+      "notes": "Dedicated physical port on the MAIN managed switch, untagged/access VLAN 99, for connecting an emergency laptop if normal routed management access is broken.",
+      "note_pages": [],
+      "tags": [
+        "recovery"
+      ]
+    },
+    {
+      "id": "mgmt-opnsense",
+      "type": "service",
+      "title": "OPNsense management",
+      "parent": null,
+      "position": {
+        "x": 2630.0,
+        "y": 2150.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "name": "opnsense.home.arpa"
+      },
+      "notes": "Management interface.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "mgmt-switch",
+      "type": "service",
+      "title": "Main switch management",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 2390.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {},
+      "notes": "Management interface.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "mgmt-deskswitch",
+      "type": "service",
+      "title": "Desk switch management",
+      "parent": null,
+      "position": {
+        "x": 2330.0,
+        "y": 2390.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {},
+      "notes": "Management interface.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "mgmt-flint",
+      "type": "service",
+      "title": "Flint 2 management",
+      "parent": null,
+      "position": {
+        "x": 2630.0,
+        "y": 2390.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {},
+      "notes": "Management interface. Reached over VLAN 99 on the Flint 2 trunk. VLAN 99 is used only for Flint 2 management on that trunk; no Management SSID.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "mgmt-proxmox",
+      "type": "service",
+      "title": "Proxmox management",
+      "parent": null,
+      "position": {
+        "x": 2030.0,
+        "y": 2630.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "name": "proxmox.home.arpa"
+      },
+      "notes": "Proxmox host management on VLAN 99 (tagged on the Beelink trunk). Architecture resolved; implementation deferred.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-trusted",
+      "type": "note",
+      "title": "Policy: VLAN 10 Trusted",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 3200.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "-> VLAN50 user services ALLOW; -> Internet via Mullvad ALLOW; -> VLAN99 DENY (ADMIN_DEVICES only ALLOW)"
+      },
+      "notes": "-> selected VLAN 50 user services: ALLOW\n-> Internet through Mullvad: ALLOW\n-> VLAN 99: DENY by default\nADMIN_DEVICES (Desktop PC, MacBook) -> VLAN 99: ALLOW\nSynology DSM administration: ADMIN_DEVICES only; ordinary Trusted clients get none.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-media",
+      "type": "note",
+      "title": "Policy: VLAN 20 Media",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 3200.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "-> Jellyfin on VLAN50 ALLOW; -> Internet via Proton ALLOW; -> Trusted/Mgmt DENY"
+      },
+      "notes": "-> Jellyfin/media service on VLAN 50: ALLOW\n-> Internet through Proton: ALLOW\n-> Trusted: DENY\n-> Management: DENY\n-> other servers: DENY unless explicitly required",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-direct",
+      "type": "note",
+      "title": "Policy: VLAN 30 Direct",
+      "parent": null,
+      "position": {
+        "x": 630.0,
+        "y": 3200.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "-> Internet via ISP ALLOW; -> internal networks DENY by default"
+      },
+      "notes": "-> Internet directly through ISP: ALLOW\n-> internal networks: DENY by default\n-> selected service exceptions may be added later\nNo default access to VLAN 99.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-guest",
+      "type": "note",
+      "title": "Policy: VLAN 60 Guest",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 3440.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "Internet-only via Mullvad; DNS/DHCP; all internal VLANs DENY; client isolation"
+      },
+      "notes": "-> Mullvad Internet: ALLOW\nDNS/DHCP: allowed\n-> all internal VLANs (10, 20, 30, 50, 99, future 40): DENY\nWireless client isolation enabled",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-servers",
+      "type": "note",
+      "title": "Policy: VLAN 50 Servers",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 3440.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "No connections initiated into client networks by default; return traffic allowed"
+      },
+      "notes": "Servers do not initiate connections into client networks by default. Stateful return traffic is allowed. Internet egress policy will be decided per service.\nSynology DSM administration (currently on VLAN 50): ADMIN_DEVICES only.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "pol-mgmt",
+      "type": "note",
+      "title": "Policy: VLAN 99 Management",
+      "parent": null,
+      "position": {
+        "x": 630.0,
+        "y": 3440.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "Administrative infrastructure only"
+      },
+      "notes": "Administrative infrastructure only. Other VLAN 10 clients are denied; ADMIN_DEVICES (Desktop PC, MacBook) get an explicit allow. No Management SSID.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "admin-devices",
+      "type": "config",
+      "title": "ADMIN_DEVICES (firewall alias)",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 3680.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "members": "Desktop PC; MacBook (admin laptop) - only these",
+        "location": "physically on VLAN 10",
+        "not_members": "GrapheneOS phone, other Trusted clients"
+      },
+      "notes": "Conceptual firewall group containing only the individual Desktop PC and MacBook tiles. Both stay on VLAN 10 Trusted; OPNsense explicitly allows ADMIN_DEVICES to VLAN 99. The GrapheneOS phone and other household Trusted clients are non-admin and get no VLAN 99 permission. Desktop and MacBook staying on VLAN 10 while explicitly allowed to VLAN 99 is INTENTIONAL and not a contradiction; the MGMT / RECOVERY port is the emergency fallback.",
+      "note_pages": [],
+      "tags": [
+        "firewall-alias"
+      ]
+    },
+    {
+      "id": "legend",
+      "type": "note",
+      "title": "LEGEND",
+      "parent": null,
+      "position": {
+        "x": 330.0,
+        "y": 3680.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "[EXISTING] live | [TO BUY] planned | [FUTURE / OPTIONAL] planned | VLAN 40 grey"
+      },
+      "notes": "Hardware status: tiles marked [EXISTING] use the live lifecycle; [TO BUY] and [FUTURE / OPTIONAL] use planned (shown with a 'planned' badge). Zones: VLAN 10 blue, 20 purple, 30 orange, 40 grey (reserved), 50 green, 60 yellow, 99 red.\nLines (cyber theme): white = PHYSICAL ISP WAN path (Internet -> ISP modem/ONT -> OPNsense); green = LOGICAL Mullvad tunnel over the ISP WAN; purple = LOGICAL Proton tunnel over the ISP WAN; blue = 802.1Q trunk; periwinkle = access/wired link; yellow = management plane; grey = logical ALLOW; red = DENY; cyan = hosts/runs/SSID. CTRoadmap cannot draw dashed or dotted lines, so logical links are labelled. Trunks are tagged-only (no native/untagged VLAN); access ports are untagged.",
+      "note_pages": [],
+      "tags": []
+    },
+    {
+      "id": "phone",
+      "type": "node",
+      "title": "GrapheneOS phone (current device) [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 1030.0,
+        "y": 2920.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "status": "UNDER TEST"
+      },
+      "notes": "Current device in the remote-access experiment.",
+      "note_pages": [],
+      "tags": [
+        "existing",
+        "under-test"
+      ]
+    },
+    {
+      "id": "note-remote",
+      "type": "note",
+      "title": "Remote access experiment (not finalized)",
+      "parent": null,
+      "position": {
+        "x": 1330.0,
+        "y": 2920.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "WG Tunnel + Mullvad WireGuard; combined private-home routing NOT finalized"
+      },
+      "notes": "Current experiment: WG Tunnel with Mullvad WireGuard. Home Wi-Fi -> device VPN off. Outside home -> Mullvad enabled automatically. Combined private-home WireGuard routing has NOT been finalized. NetBird has NOT been selected. Not drawn as production infrastructure.",
+      "note_pages": [],
+      "tags": [
+        "under-test"
+      ]
+    },
+    {
+      "id": "note-ds218-dsm",
+      "type": "note",
+      "title": "Synology DSM: on VLAN 50 now; VLAN 99 FUTURE / TBD",
+      "parent": null,
+      "position": {
+        "x": 3230.0,
+        "y": 1720.0
+      },
+      "size": null,
+      "lifecycle": "planned",
+      "fields": {
+        "text": "DSM admin currently on VLAN 50, ADMIN_DEVICES only; VLAN 99 attachment FUTURE/TBD"
+      },
+      "notes": "The DS218 is physically attached only to VLAN 50, so DSM administration currently occurs on VLAN 50. ADMIN_DEVICES -> Synology DSM on VLAN 50: ALLOW. Ordinary Trusted clients: no DSM administration access. A dedicated Synology management attachment to VLAN 99 remains FUTURE/TBD. DSM is not drawn as living on VLAN 99.",
+      "note_pages": [],
+      "tags": [
+        "future-tbd"
+      ]
+    },
+    {
+      "id": "macbook",
+      "type": "node",
+      "title": "MacBook (admin laptop) [EXISTING]",
+      "parent": null,
+      "position": {
+        "x": 30.0,
+        "y": 1480.0
+      },
+      "size": null,
+      "lifecycle": "live",
+      "fields": {
+        "role": "Admin laptop - ADMIN_DEVICES member",
+        "vlan": "10 Trusted"
+      },
+      "notes": "Existing. Physically stays on VLAN 10 Trusted. One of the two ADMIN_DEVICES members.",
+      "note_pages": [],
+      "tags": [
+        "existing",
+        "admin-device"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "l001",
+      "from": "internet",
+      "to": "isp-modem",
+      "type": "depends_on",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "live",
+      "label": "Internet <-> ISP modem/ONT (physical)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l004",
+      "from": "isp-modem",
+      "to": "opnsense",
+      "type": "depends_on",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ISP WAN (physical) - also VLAN 30 direct egress, no VPN",
+      "notes": "The only physical Internet path: Internet -> ISP modem/ONT -> ISP WAN -> OPNsense. VLAN 30 Direct uses this WAN without either commercial VPN.",
+      "directional": false
+    },
+    {
+      "id": "l005",
+      "from": "gw-mullvad",
+      "to": "opnsense",
+      "type": "uses_storage",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "LOGICAL tunnel from OPNsense, over ISP WAN (Mullvad)",
+      "notes": "Logical WireGuard tunnel, not a physical connection.",
+      "directional": false
+    },
+    {
+      "id": "l007",
+      "from": "opnsense",
+      "to": "main-switch",
+      "type": "contains",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "802.1Q TRUNK - tagged VLAN 10,20,30,50,60,99 - no native/untagged VLAN",
+      "notes": "OPNsense to main managed switch. Tagged-only trunk; VLAN 40 is reserved and not carried.",
+      "directional": false
+    },
+    {
+      "id": "l008",
+      "from": "flint2",
+      "to": "main-switch",
+      "type": "contains",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "802.1Q TRUNK - tagged VLAN 10,30,60,99 - no native/untagged VLAN",
+      "notes": "Main switch to Flint 2. Tagged-only trunk. VLAN 99 is Flint management only; there is no Management SSID.",
+      "directional": false
+    },
+    {
+      "id": "l009",
+      "from": "main-switch",
+      "to": "desk-switch",
+      "type": "contains",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "802.1Q TRUNK - tagged VLAN 10,30 - no native/untagged VLAN",
+      "notes": "Main switch to desk managed switch. Tagged-only trunk.",
+      "directional": false
+    },
+    {
+      "id": "l010",
+      "from": "main-switch",
+      "to": "ugoos",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 20 (untagged)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l011",
+      "from": "main-switch",
+      "to": "mgmt-port",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 99 (untagged) - MGMT / RECOVERY",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l012",
+      "from": "main-switch",
+      "to": "beelink",
+      "type": "contains",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "802.1Q TRUNK - tagged VLAN 50,99 - no native/untagged VLAN",
+      "notes": "Main switch to Beelink/Proxmox. Tagged-only trunk. VLAN 99 = Proxmox host management; VLAN 50 = application/VM/LXC service workloads. Intentional. Architecture resolved; implementation deferred (bridge configuration documented during deployment).",
+      "directional": false
+    },
+    {
+      "id": "l013",
+      "from": "main-switch",
+      "to": "ds218",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 50 (untagged) - physical/data attachment",
+      "notes": "VLAN 50 only for this architecture version. No VLAN 50 + VLAN 99 trunk is claimed.",
+      "directional": false
+    },
+    {
+      "id": "l014",
+      "from": "desk-switch",
+      "to": "desktop-pc",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 10 (untagged)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l015",
+      "from": "desk-switch",
+      "to": "port-spare10",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 10 (untagged, spare)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l016",
+      "from": "desk-switch",
+      "to": "dock",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 30 (untagged)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l017",
+      "from": "desk-switch",
+      "to": "port-spare30",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "ACCESS VLAN 30 (untagged, spare)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l018",
+      "from": "dock",
+      "to": "laptop",
+      "type": "requires_config",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "live",
+      "label": "Ethernet via dock (WORK MODE)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l019",
+      "from": "ugoos",
+      "to": "tv",
+      "type": "documents",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "live",
+      "label": "HDMI only (TV has no network)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l020",
+      "from": "flint2",
+      "to": "ssid-home",
+      "type": "hosts",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "SSID Home -> VLAN 10",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l021",
+      "from": "flint2",
+      "to": "ssid-direct",
+      "type": "hosts",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "SSID Direct -> VLAN 30",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l022",
+      "from": "flint2",
+      "to": "ssid-guest",
+      "type": "hosts",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "SSID Guest -> VLAN 60",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l023",
+      "from": "laptop",
+      "to": "ssid-home",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "PERSONAL MODE: Home Wi-Fi -> VLAN 10 -> Mullvad",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l024",
+      "from": "laptop",
+      "to": "vlan30",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "WORK MODE: dock -> VLAN 30 -> ISP",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l025",
+      "from": "beelink",
+      "to": "proxmox",
+      "type": "hosts",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "planned to run",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l026",
+      "from": "proxmox",
+      "to": "linkwarden",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "planned migration target",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l027",
+      "from": "proxmox",
+      "to": "jellyfin",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l028",
+      "from": "proxmox",
+      "to": "floppy",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l029",
+      "from": "proxmox",
+      "to": "sonarr",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l030",
+      "from": "proxmox",
+      "to": "radarr",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l031",
+      "from": "proxmox",
+      "to": "prowlarr",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l032",
+      "from": "proxmox",
+      "to": "sabnzbd",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l033",
+      "from": "proxmox",
+      "to": "observability",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l034",
+      "from": "proxmox",
+      "to": "future-apps",
+      "type": "runs",
+      "from_port": "child",
+      "to_port": "parent",
+      "lifecycle": "planned",
+      "label": "runs",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l035",
+      "from": "opnsense",
+      "to": "mgmt-opnsense",
+      "type": "controls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "management plane (VLAN 99)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l036",
+      "from": "main-switch",
+      "to": "mgmt-switch",
+      "type": "controls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "management plane (VLAN 99)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l037",
+      "from": "desk-switch",
+      "to": "mgmt-deskswitch",
+      "type": "controls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "management plane (VLAN 99)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l038",
+      "from": "flint2",
+      "to": "mgmt-flint",
+      "type": "controls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "management plane (VLAN 99)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l039",
+      "from": "proxmox",
+      "to": "mgmt-proxmox",
+      "type": "controls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "management plane (VLAN 99)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l041",
+      "from": "ugoos",
+      "to": "jellyfin",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "ALLOW: Jellyfin only",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l042",
+      "from": "clients10",
+      "to": "vlan50",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "ALLOW: selected user services",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l043",
+      "from": "admin-devices",
+      "to": "vlan99",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "ALLOW (explicit): ADMIN_DEVICES on VLAN 10 -> VLAN 99",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l044",
+      "from": "clients10",
+      "to": "vlan99",
+      "type": "fails_if",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "DENY: other VLAN 10 clients -> VLAN 99",
+      "notes": "",
+      "directional": true
+    },
+    {
+      "id": "l045",
+      "from": "admin-devices",
+      "to": "desktop-pc",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "member",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l047",
+      "from": "phone",
+      "to": "note-remote",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "experiment (under test)",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l006",
+      "from": "opnsense",
+      "to": "gw-proton",
+      "type": "calls",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "LOGICAL tunnel from OPNsense, over ISP WAN (Proton)",
+      "notes": "Logical WireGuard tunnel, not a physical connection.",
+      "directional": false
+    },
+    {
+      "id": "l048",
+      "from": "admin-devices",
+      "to": "macbook",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "member",
+      "notes": "",
+      "directional": false
+    },
+    {
+      "id": "l049",
+      "from": "macbook",
+      "to": "linkwarden",
+      "type": "runs",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "live",
+      "label": "current host: MacBook",
+      "notes": "Current state. Migrates to Proxmox/VLAN 50.",
+      "directional": true
+    },
+    {
+      "id": "l050",
+      "from": "admin-devices",
+      "to": "ds218",
+      "type": "related_to",
+      "from_port": "out",
+      "to_port": "in",
+      "lifecycle": "planned",
+      "label": "ALLOW: DSM administration on VLAN 50 (ADMIN_DEVICES only)",
+      "notes": "Ordinary Trusted clients receive no DSM administration access.",
+      "directional": true
+    }
+  ],
+  "views": [
+    {
+      "id": "hardware",
+      "title": "Hardware",
+      "description": "Physical nodes, drives, and IoT devices",
+      "visible_types": [
+        "node",
+        "drive",
+        "iot_device"
+      ],
+      "visible_links": [],
+      "show_family_tiles": true,
+      "hidden_family_ids": [],
+      "hidden_tags": [],
+      "camera": {
+        "x": 0.0,
+        "y": 0.0,
+        "zoom": 1.0
+      },
+      "layout_template": "canvas_topology"
+    },
+    {
+      "id": "software",
+      "title": "Software",
+      "description": "Services, containers, and URLs",
+      "visible_types": [
+        "service",
+        "container",
+        "url"
+      ],
+      "visible_links": [],
+      "show_family_tiles": true,
+      "hidden_family_ids": [],
+      "hidden_tags": [],
+      "camera": {
+        "x": 0.0,
+        "y": 0.0,
+        "zoom": 1.0
+      },
+      "layout_template": "canvas_topology"
+    },
+    {
+      "id": "infrastructure",
+      "title": "Infrastructure",
+      "description": "Scripts, secrets, configs, notes, mounts, flows, and checks",
+      "visible_types": [
+        "script",
+        "secret_ref",
+        "config",
+        "note",
+        "mount",
+        "flow",
+        "check"
+      ],
+      "visible_links": [],
+      "show_family_tiles": true,
+      "hidden_family_ids": [],
+      "hidden_tags": [],
+      "camera": {
+        "x": 0.0,
+        "y": 0.0,
+        "zoom": 1.0
+      },
+      "layout_template": "canvas_topology"
+    },
+    {
+      "id": "everything",
+      "title": "Everything",
+      "description": "All atlas objects and relationships",
+      "visible_types": [],
+      "visible_links": [],
+      "show_family_tiles": true,
+      "hidden_family_ids": [],
+      "hidden_tags": [],
+      "camera": {
+        "x": 0.0,
+        "y": 0.0,
+        "zoom": 1.0
+      },
+      "layout_template": "canvas_topology"
+    }
+  ],
+  "stacks": [],
+  "families": [
+    {
+      "id": "core",
+      "title": "INTERNET EDGE & CORE",
+      "description": "Internet, VPN egress gateways, OPNsense, Flint 2 and the main switch",
+      "member_tile_ids": [
+        "internet",
+        "gw-mullvad",
+        "isp-modem",
+        "gw-proton",
+        "opnsense",
+        "note-failclosed",
+        "note-dns",
+        "flint2",
+        "main-switch"
+      ],
+      "position": {
+        "x": 1000.0,
+        "y": 0.0
+      },
+      "size": {
+        "width": 1520.0,
+        "height": 1050.0
+      },
+      "order": 0,
+      "color": "#64748b",
+      "tag": null
+    },
+    {
+      "id": "z-v10",
+      "title": "VLAN 10 - TRUSTED | 10.10.10.0/24 | egress: Mullvad",
+      "description": "Trusted household/personal clients",
+      "member_tile_ids": [
+        "vlan10",
+        "ssid-home",
+        "clients10",
+        "macbook"
+      ],
+      "position": {
+        "x": 0.0,
+        "y": 1150.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 570.0
+      },
+      "order": 1,
+      "color": "#3b82f6",
+      "tag": null
+    },
+    {
+      "id": "z-v30",
+      "title": "VLAN 30 - DIRECT | 10.10.30.0/24 | egress: ISP WAN",
+      "description": "VPN-bypass / compatibility network",
+      "member_tile_ids": [
+        "vlan30",
+        "ssid-direct"
+      ],
+      "position": {
+        "x": 0.0,
+        "y": 1820.0
+      },
+      "size": {
+        "width": 620.0,
+        "height": 330.0
+      },
+      "order": 2,
+      "color": "#f97316",
+      "tag": null
+    },
+    {
+      "id": "z-v60",
+      "title": "VLAN 60 - GUEST | 10.10.60.0/24 | egress: Mullvad",
+      "description": "Internet-only guest network",
+      "member_tile_ids": [
+        "vlan60",
+        "ssid-guest"
+      ],
+      "position": {
+        "x": 0.0,
+        "y": 2250.0
+      },
+      "size": {
+        "width": 620.0,
+        "height": 330.0
+      },
+      "order": 3,
+      "color": "#eab308",
+      "tag": null
+    },
+    {
+      "id": "z-v40",
+      "title": "VLAN 40 - IOT | 10.10.40.0/24 | RESERVED / INACTIVE / FUTURE",
+      "description": "Reserved, not deployed",
+      "member_tile_ids": [
+        "vlan40",
+        "iot-devices",
+        "ssid-iot"
+      ],
+      "position": {
+        "x": 0.0,
+        "y": 2680.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 330.0
+      },
+      "order": 4,
+      "color": "#9ca3af",
+      "tag": null
+    },
+    {
+      "id": "desk",
+      "title": "DESK NETWORK (terminates VLAN 10 + VLAN 30)",
+      "description": "Desk switch, desktop, dock and laptop",
+      "member_tile_ids": [
+        "desk-switch",
+        "desktop-pc",
+        "port-spare10",
+        "dock",
+        "note-desktop-decision",
+        "port-spare30",
+        "laptop",
+        "old-desk-switch"
+      ],
+      "position": {
+        "x": 1000.0,
+        "y": 1150.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 1050.0
+      },
+      "order": 5,
+      "color": "#14b8a6",
+      "tag": null
+    },
+    {
+      "id": "z-v20",
+      "title": "VLAN 20 - MEDIA | 10.10.20.0/24 | egress: Proton VPN",
+      "description": "Ugoos AM9 Pro media player",
+      "member_tile_ids": [
+        "vlan20",
+        "ugoos",
+        "tv"
+      ],
+      "position": {
+        "x": 1000.0,
+        "y": 2400.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 330.0
+      },
+      "order": 6,
+      "color": "#a855f7",
+      "tag": null
+    },
+    {
+      "id": "remote",
+      "title": "REMOTE ACCESS / PHONE MOBILITY - STATUS: UNDER TEST",
+      "description": "Not part of the finalized topology",
+      "member_tile_ids": [
+        "phone",
+        "note-remote"
+      ],
+      "position": {
+        "x": 1000.0,
+        "y": 2830.0
+      },
+      "size": {
+        "width": 620.0,
+        "height": 330.0
+      },
+      "order": 7,
+      "color": "#94a3b8",
+      "tag": null
+    },
+    {
+      "id": "z-v50",
+      "title": "VLAN 50 - SERVERS | 10.10.50.0/24 | Internet egress: POLICY TBD / per-service",
+      "description": "Beelink/Proxmox workloads and Synology data plane",
+      "member_tile_ids": [
+        "vlan50",
+        "beelink",
+        "proxmox",
+        "ds218",
+        "future-nas",
+        "linkwarden",
+        "jellyfin",
+        "floppy",
+        "sonarr",
+        "radarr",
+        "prowlarr",
+        "sabnzbd",
+        "observability",
+        "future-apps",
+        "note-ds218-dsm"
+      ],
+      "position": {
+        "x": 2000.0,
+        "y": 1150.0
+      },
+      "size": {
+        "width": 1520.0,
+        "height": 810.0
+      },
+      "order": 8,
+      "color": "#22c55e",
+      "tag": null
+    },
+    {
+      "id": "z-v99",
+      "title": "VLAN 99 - MANAGEMENT | 10.10.99.0/24 | infrastructure administration only",
+      "description": "Management plane",
+      "member_tile_ids": [
+        "vlan99",
+        "mgmt-port",
+        "mgmt-opnsense",
+        "mgmt-switch",
+        "mgmt-deskswitch",
+        "mgmt-flint",
+        "mgmt-proxmox"
+      ],
+      "position": {
+        "x": 2000.0,
+        "y": 2060.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 810.0
+      },
+      "order": 9,
+      "color": "#ef4444",
+      "tag": null
+    },
+    {
+      "id": "policy",
+      "title": "FIREWALL INTENT (summary) & LEGEND",
+      "description": "Policy notes instead of per-link rules",
+      "member_tile_ids": [
+        "pol-trusted",
+        "pol-media",
+        "pol-direct",
+        "pol-guest",
+        "pol-servers",
+        "pol-mgmt",
+        "admin-devices",
+        "legend"
+      ],
+      "position": {
+        "x": 0.0,
+        "y": 3110.0
+      },
+      "size": {
+        "width": 920.0,
+        "height": 810.0
+      },
+      "order": 10,
+      "color": "#475569",
+      "tag": null
+    }
+  ],
+  "racks": [],
+  "address_book_entries": [],
+  "handbook": {
+    "special_sections": [
+      {
+        "id": "address-book",
+        "position": 0
+      },
+      {
+        "id": "swimlanes",
+        "position": 1
+      }
+    ],
+    "logo_ref": null
+  }
+}
